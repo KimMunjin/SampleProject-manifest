@@ -1,0 +1,14 @@
+# prod/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APP_NAME}-service
+  labels:
+    env: prod
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: ${APP_NAME}
