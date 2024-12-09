@@ -1,12 +1,13 @@
-# deployment.yaml
+# dev/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ${APP_NAME}
   labels:
     app: ${APP_NAME}
+    env: dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: ${APP_NAME}
@@ -14,6 +15,7 @@ spec:
     metadata:
       labels:
         app: ${APP_NAME}
+        env: dev
     spec:
       containers:
       - name: ${APP_NAME}
