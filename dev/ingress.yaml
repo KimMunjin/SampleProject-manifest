@@ -1,13 +1,15 @@
-# ingress.yaml
+# dev/ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: ${APP_NAME}-ingress
+  labels:
+    env: dev
   annotations:
     kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-  - host: ${INGRESS_HOST}
+  - host: dev.${INGRESS_HOST}
     http:
       paths:
       - path: /
