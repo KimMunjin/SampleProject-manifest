@@ -1,0 +1,88 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - "main"
+      - "develop"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    # 브랜치에 따라 환경 결정
+    env:
+      ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-cicd-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Update Kubernetes manifests
+        env:
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+          APP_NAME: "sample-app"
+          INGRESS_HOST: ${{ secrets.INGRESS_HOST }}
+        run: |
+          git clone https://github.com/KimMunjin/SampleProject-manifest.git
+          cd SampleProject-manifest
+          
+          # 환경별 디렉토리의 yaml 파일 업데이트
+          cd $ENVIRONMENT
+          
+          # 모든 yaml 파일에서 플레이스홀더 치환
+          for file in *.yaml; do
+            sed -i "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" $file
+            sed -i "s|\${AWS_REGION}|$AWS_REGION|g" $file
+            sed -i "s|\${ECR_REPOSITORY}|$ECR_REPOSITORY|g" $file
+            sed -i "s|\${IMAGE_TAG}|$IMAGE_TAG|g" $file
+            sed -i "s|\${APP_NAME}|$APP_NAME|g" $file
+            sed -i "s|\${INGRESS_HOST}|$INGRESS_HOST|g" $file
+          done
+          
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          
+          git add .
+          git commit -m "Update $ENVIRONMENT manifests for ${IMAGE_TAG}"
+          git push https://x-access-token:${GIT_TOKEN}@github.com/KimMunjin/SampleProject-manifest.git
