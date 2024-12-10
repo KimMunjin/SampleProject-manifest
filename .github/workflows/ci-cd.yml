@@ -31,7 +31,9 @@ jobs:
           APP_NAME: "sample-app"
           INGRESS_HOST: ${{ secrets.INGRESS_HOST }}
         run: |
-          cd $ENVIRONMENT
+          # 매니페스트 저장소 클론
+          git clone "https://$GIT_TOKEN@github.com/KimMunjin/SampleProject-manifest.git"
+          cd SampleProject-manifest/$ENVIRONMENT
           
           # 모든 yaml 파일에서 플레이스홀더 치환
           for file in *.yaml; do
@@ -50,5 +52,5 @@ jobs:
           if [[ -n "$(git status --porcelain)" ]]; then
             git add .
             git commit -m "Update $ENVIRONMENT manifests for ${IMAGE_TAG}"
-            git push "https://$GIT_TOKEN@github.com/KimMunjin/SampleProject-manifest.git"
+            git push "https://$GIT_TOKEN@github.com/KimMunjin/SampleProject-manifest.git" main
           fi
