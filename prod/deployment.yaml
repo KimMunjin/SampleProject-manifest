@@ -2,24 +2,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ${APP_NAME}
+  name: sample-app
   labels:
-    app: ${APP_NAME}
+    app: sample-app
     env: prod
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: ${APP_NAME}
+      app: sample-app
   template:
     metadata:
       labels:
-        app: ${APP_NAME}
+        app: sample-app
         env: prod
     spec:
       containers:
-      - name: ${APP_NAME}
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}
+      - name: sample-app
+        image: 127770962422.dkr.ecr.ap-northeast-2.amazonaws.com/sample-project:bec91eb9a78e0c1269bdac7ea4ab4ef074cd3a81
         ports:
         - containerPort: 8080
         resources:
